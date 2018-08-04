@@ -288,11 +288,8 @@ class PlanningGraph:
                 solution = self._extract_solution()
                 if solution:
                     return solution
-                elif not self._expand_graph():
-                    return None
-            else:
-                if not self._expand_graph():
-                    return None
+            if not self._expand_graph():
+                return None
 
     def _possible_goal(self):
         goals = self._problem.goal
@@ -425,7 +422,7 @@ class PlanningGraph:
                         action_tree[key] = (index, parent_actions)
                         search_stack.append(key)
 
-    def visualize(self, filename):
+    def visualize(self):
         """Visualize planning graph with Graphviz"""
         from graphviz import Digraph
 
@@ -449,6 +446,179 @@ class PlanningGraph:
             for e in level.del_edges:
                 g.edge(e[0].safe_name + this, e[1].safe_name + this,
                        style='dotted', headport='w', tailport='e', arrowhead='none')
+            for name in noop_nodes:
+                g.node(name, label='')
+            for m in level.mutex_actions:
+                m = list(m)
+                g.edge(m[0].safe_name + this, m[1].safe_name + this,
+                    arrowhead='none', color='red',
+                    constraint='false', headport='w', tailport='w')
+            for m in level.mutex_states:
+                m = list(m)
+                g.edge(m[0].safe_name + this, m[1].safe_name + this,
+                    arrowhead='none', color='blue',
+                    constraint='false', headport='w', tailport='w')
+            for s in level.states:
+                g.node(s.safe_name + this, label=s.name)
+            g.body.append('{rank=same; ' + '; '.join(s.safe_name + this for s in level.states) + ';}')
+        g.view()
+
+
+class RelaxedPlanningGraph:
+    def __init__(self, problem):
+        # type: (Domain) -> None
+        self._problem = problem
+        self._levels = []
+        level = Level()
+        level.states = problem.init
+        self._levels.append(level)
+
+    def solve(self):
+        while True:
+            if self._possible_goal():
+                solution = self._extract_solution()
+                if solution:
+                    return solution
+            if not self._expand_graph():
+                return None
+
+    def _possible_goal(self):
+        goals = self._problem.goal
+        if not goals.issubset(self._levels[-1].states):
+            print("not subuset")
+            return False
+        for g, h in itertools.permutations(goals, 2):
+            if set([g, h]) in self._levels[-1].mutex_states:
+                print("goal state is mutex")
+                return False
+        return True
+
+    def _expand_graph(self):
+        states = self._levels[-1].states
+        cur_level = self._levels[-1]
+        new_level = Level()
+
+        # Extend no opts
+        for s in states:
+            noop = Noop(s)
+            new_level.precondition_edges.add((s, noop))
+            new_level.add_edges.add((noop, s))
+            new_level.states.add(s)
+            new_level.actions.add(noop)
+
+        # Extend actions
+        for a in self._problem.ground_actions:
+            if a.preconditions.issubset(states):
+                new_level.actions.add(a)
+                for s in a.preconditions:
+                    new_level.precondition_edges.add((s, a))
+                for e in a.add_effects:
+                    new_level.add_edges.add((a, e))
+                    new_level.states.add(e)
+
+        # If a new layer has the same stetes with previous layer, return False
+        if states == new_level.states:
+            return False
+
+        self._levels.append(new_level)
+        return True
+
+    def _extract_solution2(self):
+        g = self._problem.goal
+        m = len(self._levels)
+        G = []*m
+        mark_table = {}
+        for i in range(1, m):
+            G[i] =
+
+        for i in range(len(self._levels) - 1, 0, -1):
+            for g in x:
+                for f in o.preconditions:
+
+                for f in o.add_effects:
+                    mark_table[(i, f)] = True
+                    mark_table[(i - 1, f)] = True
+
+
+    def _extract_solution(self):
+        """Extract a solution from this planning graph
+
+        Perform backward depth-first search
+
+        """
+        goal_set = self._problem.goal
+        index = len(self._levels) - 1
+        search_stack = []
+        action_tree = {}
+        action_candidates = []
+        for g in goal_set:
+            actions = set([e[0] for e in self._levels[index].add_edges
+                           if e[1] == g])
+            action_candidates.append(actions)
+        for action_tuple in itertools.product(*action_candidates):
+            for a, b in itertools.combinations(action_tuple, 2):
+                if set([a, b]) in self._levels[index].mutex_actions:
+                    break
+            else:
+                key = (index, action_tuple)
+                action_tree[key] = None
+                search_stack.append(key)
+        while True:
+            if len(search_stack) == 0:
+                # No solution
+                return None
+            parent_key = search_stack.pop()
+            index, parent_actions = parent_key
+            goal_set = set()
+            for a in parent_actions:
+                goal_set.update(a.preconditions)
+            action_candidates = []
+            for g in goal_set:
+                actions = set([e[0] for e in self._levels[index-1].add_edges
+                               if e[1] == g])
+                action_candidates.append(actions)
+            for action_tuple in itertools.product(*action_candidates):
+                for a, b in itertools.combinations(action_tuple, 2):
+                    if set([a, b]) in self._levels[index-1].mutex_actions:
+                        break
+                else:
+                    if (index - 1) == 1:
+                        # Solution found
+                        solution = [frozenset([a for a in action_tuple
+                                               if not isinstance(a, Noop)])]
+                        a = (index, parent_actions)
+                        while a is not None:
+                            action = frozenset([a for a in a[1]
+                                                if not isinstance(a, Noop)])
+                            solution.append(action)
+                            a = action_tree[a]
+                        return solution
+                    else:
+                        key = (index-1, tuple(action_tuple))
+                        action_tree[key] = (index, parent_actions)
+                        search_stack.append(key)
+
+    def visualize(self):
+        """Visualize planning graph with Graphviz"""
+        from graphviz import Digraph
+
+        g = Digraph(format='png')
+        g.attr(overlap='false', rankdir='LR', ranksep="2", splines="compound")
+        g.attr('node', shape='box')
+        for s in self._levels[0].states:
+            g.node(s.safe_name + '_L0')
+        for i, level in enumerate(self._levels[1:]):
+            prev = '_L{}'.format(i)
+            this = '_L{}'.format(i+1)
+            for a in level.actions:
+                g.node(a.safe_name + this, label=a.name)
+            noop_nodes = []
+            for e in level.precondition_edges:
+                g.edge(e[0].safe_name + prev, e[1].safe_name + this,
+                        headport='w', tailport='e', arrowhead='none')
+            for e in level.add_edges:
+                g.edge(e[0].safe_name + this, e[1].safe_name + this,
+                        headport='w', tailport='e', arrowhead='none')
             for name in noop_nodes:
                 g.node(name, label='')
             for m in level.mutex_actions:
