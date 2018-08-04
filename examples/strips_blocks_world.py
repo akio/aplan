@@ -44,33 +44,33 @@ class BlocksWorld(Domain):
     predicates = [On, OnTable, Clear]
     actions = [Move, ToTable, FromTable]
 
+def run():
+    problem = BlocksWorld(init=[On('R', 'B'),
+                                On('B', 'G'),
+                                OnTable('G'),
+                                OnTable('A'),
+                                Clear('R'),
+                                Clear('A'),
+                                ],
+                        goal=[On('G', 'B'), On('B', 'R'), OnTable('R')])
+    from pprint import pprint
+    pprint(problem.ground_states)
+    pprint(problem.ground_actions)
+    pprint(problem.init)
+    pprint(problem.goal)
 
-problem = BlocksWorld(init=[On('R', 'B'),
-                            On('B', 'G'),
-                            OnTable('G'),
-                            OnTable('A'),
-                            Clear('R'),
-                            Clear('A'),
-                            ],
-                      goal=[On('G', 'B'), On('B', 'R'), OnTable('R')])
-from pprint import pprint
-pprint(problem.ground_states)
-pprint(problem.ground_actions)
-pprint(problem.init)
-pprint(problem.goal)
 
-
-print("---- search ----")
-result = breadth_first_search(problem)
-#result = depth_first_search(problem)
-if result is None:
-    print("Not found")
-else:
-    print(problem.init)
-    for a, s in result:
-        print('    |')
-        print('    V')
-        print(a)
-        print('    |')
-        print('    V')
-        print(s)
+    print("---- search ----")
+    result = breadth_first_search(problem)
+    #result = depth_first_search(problem)
+    if result is None:
+        print("Not found")
+    else:
+        print(problem.init)
+        for a, s in result:
+            print('    |')
+            print('    V')
+            print(a)
+            print('    |')
+            print('    V')
+            print(s)
