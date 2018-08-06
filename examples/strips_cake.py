@@ -9,50 +9,44 @@ from autoplan.strips import enfoced_hill_climbing_search
 from autoplan.planning_graph import PlanningGraph
 from autoplan.planning_graph import RelaxedPlanningGraph
 
+from pprint import pprint
 
-class On(State):
-    variables = ['?obj1', '?obj2']
-
-class OnTable(State):
+class Have(State):
     variables = ['?obj']
 
-class Clear(State):
+class NotHave(State):
     variables = ['?obj']
 
-class Move(Action):
-    variables =  ['?obj', '?from', '?to']
-    preconditions = [On('?obj', '?from'),
-                     Clear('?obj'),
-                     Clear('?to')]
-    add_effects = [On('?obj', '?to'), Clear('?from')]
-    del_effects = [On('?obj', '?from'), Clear('?to')]
+class Eaten(State):
+    variables = ['?obj']
+
+class NotEaten(State):
+    variables = ['?obj']
+
+class Eat(Action):
+    variables =  ['?cake']
+    preconditions = [Have('?cake')]
+    add_effects = [Eaten('?cake'), NotHave('?cake')]
+    del_effects = [Have('?cake'), NotEaten('?cake') ]
     cost = 1
 
-class ToTable(Action):
-    variables =  ['?obj','?from']
-    preconditions = [On('?obj', '?from'), Clear('?obj')]
-    add_effects = [OnTable('?obj'), Clear('?from')]
-    del_effects = [On('?obj', '?from')]
+class Bake(Action):
+    variables =  ['?cake']
+    preconditions = [NotHave('?cake')]
+    add_effects = [Have('?cake')]
+    del_effects = [NotHave('?cake')]
     cost = 1
 
-class FromTable(Action):
-    variables =  ['?obj','?to']
-    preconditions = [OnTable('?obj'), Clear('?obj'), Clear('?to')]
-    add_effects = [On('?obj', '?to')]
-    del_effects = [OnTable('?obj'), Clear('?to')]
-    cost = 1
 
-class BlocksWorld(Domain):
-    objects = ['R', 'G', 'B', 'A']
-    predicates = [On, OnTable, Clear]
-    actions = [Move, ToTable, FromTable]
+class CakeWorld(Domain):
+    objects = ['cake']
+    predicates = [Have, NotHave, Eaten, NotEaten]
+    actions = [Eat, Bake]
 
 def run():
-    problem = BlocksWorld()
-    init=[On('R', 'B'), On('B', 'G'), OnTable('G'), OnTable('A'), Clear('R'), Clear('A'), ]
-    goal=[On('G', 'B'), On('B', 'R'), OnTable('R')]
-
-    from pprint import pprint
+    init = [Have('cake'), NotEaten('cake')]
+    goal = [Have('cake'), Eaten('cake')]
+    problem = CakeWorld()
     pprint(problem.ground_states)
     pprint(problem.ground_actions)
     pprint(init)
@@ -60,7 +54,7 @@ def run():
 
 
     print("---- search ----")
-    result = breadth_first_search(problem, init, goal)
+    result = breadth_first_search(problem)
     #result = depth_first_search(problem)
     if result is None:
         print("Not found")
@@ -78,6 +72,8 @@ def run():
     print('-------------------')
     pg = PlanningGraph(problem, init, goal)
     solution = pg.solve()
+
+    #pg.visualize()
     if solution is not None:
         for actions in solution:
             print(', '.join(a.name for a in actions))
@@ -93,6 +89,24 @@ def run():
     else:
         print('FAILED')
 
+    print("---- test 1 ----")
+
+    rpg = RelaxedPlanningGraph(problem, [NotHave('cake'), Eaten('cake')],
+                               [Have('cake'), Eaten('cake')])
+    print('x=', rpg._possible_goal())
+    solution = rpg.solve()
+    print('h=', len(solution))
+    print(solution)
+    rpg.visualize()
+
+    print("---- test 2 ----")
+
+    rpg = RelaxedPlanningGraph(problem, [Have('cake'), Eaten('cake')],
+                               [Have('cake'), Eaten('cake')])
+    print('x=', rpg._possible_goal())
+    solution = rpg.solve()
+    print('h=', len(solution))
+    print(solution)
 
     print("---- enforced hill climbing search ----")
     result = enfoced_hill_climbing_search(problem, init, goal)
@@ -103,7 +117,8 @@ def run():
         for a, s in result:
             print('    |')
             print('    V')
-            print(a.name)
+            print(a)
             print('    |')
             print('    V')
-            print(list(s))
+            print(s)
+

@@ -9,6 +9,9 @@ from autoplan.strips import enfoced_hill_climbing_search
 from autoplan.planning_graph import PlanningGraph
 from autoplan.planning_graph import RelaxedPlanningGraph
 
+from pprint import pprint
+import time
+
 
 class On(State):
     variables = ['?obj1', '?obj2']
@@ -48,10 +51,16 @@ class BlocksWorld(Domain):
     actions = [Move, ToTable, FromTable]
 
 def run():
-    problem = BlocksWorld()
-    init=[On('R', 'B'), On('B', 'G'), OnTable('G'), OnTable('A'), Clear('R'), Clear('A'), ]
-    goal=[On('G', 'B'), On('B', 'R'), OnTable('R')]
 
+    init = [On('R', 'B'),
+            On('B', 'G'),
+            OnTable('G'),
+            OnTable('A'),
+            Clear('R'),
+            Clear('A'),
+            ]
+    goal = [On('A', 'G'), On('G', 'B'), On('B', 'R'), OnTable('R')]
+    problem = BlocksWorld()
     from pprint import pprint
     pprint(problem.ground_states)
     pprint(problem.ground_actions)
@@ -77,22 +86,28 @@ def run():
 
     print('-------------------')
     pg = PlanningGraph(problem, init, goal)
+    start = time.time()
     solution = pg.solve()
+    end = time.time()
+    print('TIME: ', end - start)
     if solution is not None:
         for actions in solution:
             print(', '.join(a.name for a in actions))
     else:
         print('FAILED')
+    pg.visualize()
 
     print('-------------------')
     rpg = RelaxedPlanningGraph(problem, init, goal)
+    start = time.time()
     solution = rpg.solve()
+    end = time.time()
+    print('TIME: ', end - start)
     if solution is not None:
         for actions in solution:
             print(', '.join(a.name for a in actions))
     else:
         print('FAILED')
-
 
     print("---- enforced hill climbing search ----")
     result = enfoced_hill_climbing_search(problem, init, goal)
@@ -103,7 +118,8 @@ def run():
         for a, s in result:
             print('    |')
             print('    V')
-            print(a.name)
+            print(a)
             print('    |')
             print('    V')
-            print(list(s))
+            print(s)
+

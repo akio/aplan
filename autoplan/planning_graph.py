@@ -1,246 +1,6 @@
-#!/usr/bin/env python3
-
-import copy
 from typing import List, Dict
 import itertools
-from pprint import pprint
-
-
-class State:
-    """
-
-    Example
-    --------
-
-
-    """
-    def __init__(self, *args):
-        if len(args) != len(self.variables):
-            raise ValueError("Length not match")
-        self.args = copy.deepcopy(self.variables)
-        self.bind(**dict(zip(self.variables, args)))
-
-    def ground(self):
-        pass
-
-    def bind(self, **kwargs):
-        for i, a in enumerate(self.args):
-            if a.startswith('?'):
-                if a in kwargs:
-                    self.args[i] = kwargs[a]
-
-    @property
-    def name(self):
-        cls = self.__class__.__name__
-        return '{}({})'.format(cls, ', '.join(self.args))
-
-    @property
-    def safe_name(self):
-        cls = self.__class__.__name__
-        return '{}_{}'.format(cls, '_'.join(self.args))
-
-    def __hash__(self):
-        return hash(self.safe_name)
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
-
-    def __repr__(self):
-        return "{}({})".format(self.__class__.__name__, ', '.join(self.args))
-
-
-class Action:
-    """
-
-    Example
-    ---------
-
-
-    """
-    def __init__(self, *args):
-        self.bindings = dict(zip(self.variables, args))
-
-        preconditions = []
-        for state in self.preconditions:
-            s = copy.deepcopy(state)
-            args = {}
-            for var in state.args:
-                if var.startswith('?'):
-                    if var in self.bindings:
-                        args[var] = self.bindings[var]
-                    else:
-                        raise KeyError("No such variable: {}".format(var))
-            s.bind(**args)
-            preconditions.append(s)
-        self.preconditions = frozenset(preconditions)
-
-        add_effects = []
-        for state in self.add_effects:
-            s = copy.deepcopy(state)
-            args = {}
-            for var in state.args:
-                if var.startswith('?'):
-                    if var in self.bindings:
-                        args[var] = self.bindings[var]
-                    else:
-                        raise KeyError("No such variable: {}".format(var))
-            s.bind(**args)
-            add_effects.append(s)
-        self.add_effects = frozenset(add_effects)
-
-        del_effects = []
-        for state in self.del_effects:
-            s = copy.deepcopy(state)
-            args = {}
-            for var in state.args:
-                if var.startswith('?'):
-                    if var in self.bindings:
-                        args[var] = self.bindings[var]
-                    else:
-                        raise KeyError("No such variable: {}".format(var))
-            s.bind(**args)
-            del_effects.append(s)
-        self.del_effects = frozenset(del_effects)
-
-    @property
-    def name(self):
-        cls = self.__class__.__name__
-        args = [self.bindings[k] for k in self.variables]
-        return '{}({})'.format(cls, ', '.join(args))
-
-    @property
-    def safe_name(self):
-        cls = self.__class__.__name__
-        args = [self.bindings[k] for k in self.variables]
-        return '{}_{}_'.format(cls, '_'.join(args))
-
-    def __hash__(self):
-        return hash(self.safe_name)
-
-    def __repr__(self):
-        buf = []
-        buf.append('{} {{'.format(self.name))
-        buf.append('  Preconditions:')
-        for s in self.preconditions:
-            buf.append('    {}'.format(s))
-        buf.append('  AddEffects:')
-        for s in self.add_effects:
-            buf.append('    {}'.format(s))
-        buf.append('  DelEffects:')
-        for s in self.del_effects:
-            buf.append('    {}'.format(s))
-        buf.append('}')
-
-        return '\n'.join(buf)
-
-
-class Domain:
-    """
-
-    Example
-    --------
-
-    """
-    def __init__(self, init=[], goal=[]):
-        states = []
-        for pred in self.predicates:
-            nparams = len(pred.variables)
-            for args in itertools.permutations(self.objects, nparams):
-                p = pred(*args)
-                states.append(p)
-        self.ground_states = frozenset(states)
-
-        actions = []
-        for act in self.actions:
-            nparams = len(act.variables)
-            for args in itertools.permutations(self.objects, nparams):
-                a = act(*args)
-                actions.append(a)
-        self.ground_actions = frozenset(actions)
-
-        self.init = frozenset(init)
-        self.goal = frozenset(goal)
-
-
-def depth_first_search(problem):
-    # type: (Domain) -> List[(Action, State)]
-    init_set = frozenset(problem.init)
-    goal_set = frozenset(problem.goal)
-
-    print("INIT_SET: {}".format(init_set))
-    print("GOAL_SET: {}".format(goal_set))
-
-    open_nodes = [init_set]
-    closed_nodes = []
-    edges = []
-
-    while len(open_nodes) > 0:
-        state = open_nodes.pop()
-        print("CURRENT: {}".format(state))
-        for a in problem.ground_actions:
-            if a.preconditions.issubset(state):
-                new_state = (state | a.add_effects) - a.del_effects
-                edges.append((state, new_state, a))
-                if goal_set.issubset(new_state):
-                    print("Solution found")
-                    s = new_state
-                    path = []
-                    while s != init_set:
-                        for src, dst, act in edges:
-                            if dst == s:
-                                s = src
-                                path.append((act, dst))
-                                break
-                    return reversed(path)
-                if new_state not in closed_nodes:
-                    open_nodes.append(new_state)
-        closed_nodes.append(state)
-    return None
-
-
-def breadth_first_search(problem):
-    # type: (Domain) -> List[(Action, State)]
-    init_set = frozenset(problem.init)
-    goal_set = frozenset(problem.goal)
-
-    print("INIT_SET: {}".format(init_set))
-    print("GOAL_SET: {}".format(goal_set))
-
-    open_nodes = [init_set]
-    closed_nodes = []
-    edges = []
-
-    while len(open_nodes) > 0:
-        state = open_nodes.pop(0)
-        print("CURRENT: {}".format(state))
-        for a in problem.ground_actions:
-            if a.preconditions.issubset(state):
-                new_state = (state | a.add_effects) - a.del_effects
-                edges.append((state, new_state, a))
-                if goal_set.issubset(new_state):
-                    print("Solution found")
-                    s = new_state
-                    path = []
-                    while s != init_set:
-                        for src, dst, act in edges:
-                            if dst == s:
-                                s = src
-                                path.append((act, dst))
-                                break
-                    return reversed(path)
-                if new_state not in closed_nodes:
-                    open_nodes.append(new_state)
-        closed_nodes.append(state)
-    return None
-
-def enfoced_hill_climbing_search(problem):
-    # type: (Domain) -> List[(Action, State)]
-    plan = []
-    s = problem.init
-    while relaxed_graphplan(s) != 0:
-        pass
-
-
+from pprint import pprint, pformat
 
 class Level:
     def __init__(self):
@@ -251,6 +11,27 @@ class Level:
         self.states = set()
         self.mutex_states = set()
         self.mutex_actions = set()
+
+    def __eq__(self, other):
+        if self.states ^ other.states:
+            return False
+        if self.actions ^ other.actions:
+            return False
+        if self.precondition_edges ^ other.precondition_edges:
+            return False
+        if self.add_edges ^ other.add_edges:
+            return False
+        if self.del_edges ^ other.del_edges:
+            return False
+        if self.mutex_states ^ other.mutex_states:
+            return False
+        if self.mutex_actions ^ other.mutex_actions:
+            return False
+        return True
+
+    def __repr__(self):
+        return pformat(self.states)
+
 
 class Noop:
     def __init__(self, state):
@@ -273,42 +54,46 @@ class Noop:
     def __repr__(self):
         return ''
 
+
+
+
 class PlanningGraph:
-    def __init__(self, problem):
+    def __init__(self, problem, init=[], goal=[]):
         # type: (Domain) -> None
         self._problem = problem
         self._levels = []
         level = Level()
-        level.states = problem.init
+        level.states = frozenset(init)
+        self._goals = frozenset(goal)
         self._levels.append(level)
 
     def solve(self):
         while True:
             if self._possible_goal():
+                print("Trying to extract solution...")
                 solution = self._extract_solution()
                 if solution:
                     return solution
             if not self._expand_graph():
+                print("Failed to solve problem")
                 return None
 
     def _possible_goal(self):
-        goals = self._problem.goal
+        goals = self._goals
         if not goals.issubset(self._levels[-1].states):
-            print("not subuset")
             return False
         for g, h in itertools.permutations(goals, 2):
             if set([g, h]) in self._levels[-1].mutex_states:
-                print("goal state is mutex")
+                print("WARN: {} and {} are mutex states".format(g, h))
                 return False
         return True
 
     def _expand_graph(self):
-        states = self._levels[-1].states
         cur_level = self._levels[-1]
         new_level = Level()
 
         # Extend no opts
-        for s in states:
+        for s in cur_level.states:
             noop = Noop(s)
             new_level.precondition_edges.add((s, noop))
             new_level.add_edges.add((noop, s))
@@ -317,7 +102,7 @@ class PlanningGraph:
 
         # Extend actions
         for a in self._problem.ground_actions:
-            if a.preconditions.issubset(states):
+            if a.preconditions.issubset(cur_level.states):
                 new_level.actions.add(a)
                 for s in a.preconditions:
                     new_level.precondition_edges.add((s, a))
@@ -325,11 +110,11 @@ class PlanningGraph:
                     new_level.add_edges.add((a, e))
                     new_level.states.add(e)
                 for e in a.del_effects:
-                    if e in states:
+                    if e in cur_level.states:
                         new_level.del_edges.add((a, e))
 
         # If a new layer has the same stetes with previous layer, return False
-        if states == new_level.states:
+        if cur_level == new_level:
             return False
 
         # Analyze mutex relations
@@ -348,7 +133,7 @@ class PlanningGraph:
 
             # Competing needs
             for s, t in itertools.product(a.preconditions, b.preconditions):
-                if set([s, t]) in self._levels[-1].mutex_states:
+                if frozenset([s, t]) in self._levels[-1].mutex_states:
                     new_level.mutex_actions.add(frozenset([a, b]))
 
         # Check inconsistent support
@@ -356,7 +141,7 @@ class PlanningGraph:
             actions_for_s = [e[0] for e in new_level.add_edges if s == e[1]]
             actions_for_t = [e[0] for e in new_level.add_edges if t == e[1]]
             for a, b in itertools.product(actions_for_s, actions_for_t):
-                if set([a, b]) not in new_level.mutex_actions:
+                if frozenset([a, b]) not in new_level.mutex_actions:
                     break
             else:
                 new_level.mutex_states.add(frozenset([s, t]))
@@ -370,7 +155,7 @@ class PlanningGraph:
         Perform backward depth-first search
 
         """
-        goal_set = self._problem.goal
+        goal_set = self._goals
         index = len(self._levels) - 1
         search_stack = []
         action_tree = {}
@@ -465,41 +250,36 @@ class PlanningGraph:
 
 
 class RelaxedPlanningGraph:
-    def __init__(self, problem):
+    def __init__(self, problem, init=[], goal=[]):
         # type: (Domain) -> None
         self._problem = problem
         self._levels = []
         level = Level()
-        level.states = problem.init
+        level.states = frozenset(init)
+        self._goals = frozenset(goal)
         self._levels.append(level)
 
     def solve(self):
         while True:
             if self._possible_goal():
                 solution = self._extract_solution()
-                if solution:
+                if solution is not None:
                     return solution
             if not self._expand_graph():
                 return None
 
     def _possible_goal(self):
-        goals = self._problem.goal
+        goals = self._goals
         if not goals.issubset(self._levels[-1].states):
-            print("not subuset")
             return False
-        for g, h in itertools.permutations(goals, 2):
-            if set([g, h]) in self._levels[-1].mutex_states:
-                print("goal state is mutex")
-                return False
         return True
 
     def _expand_graph(self):
-        states = self._levels[-1].states
         cur_level = self._levels[-1]
         new_level = Level()
 
         # Extend no opts
-        for s in states:
+        for s in cur_level.states:
             noop = Noop(s)
             new_level.precondition_edges.add((s, noop))
             new_level.add_edges.add((noop, s))
@@ -508,7 +288,7 @@ class RelaxedPlanningGraph:
 
         # Extend actions
         for a in self._problem.ground_actions:
-            if a.preconditions.issubset(states):
+            if a.preconditions.issubset(cur_level.states):
                 new_level.actions.add(a)
                 for s in a.preconditions:
                     new_level.precondition_edges.add((s, a))
@@ -517,23 +297,36 @@ class RelaxedPlanningGraph:
                     new_level.states.add(e)
 
         # If a new layer has the same stetes with previous layer, return False
-        if states == new_level.states:
+        if cur_level == new_level:
             return False
 
         self._levels.append(new_level)
         return True
 
-    def _extract_solution2(self):
-        g = self._problem.goal
+    def _extract_relaxed_solution(self):
+        layer_membership = {}
+        for s in self._problem.ground_states:
+            layer_membership[s] = math.inf
+        for a in self._problem.ground_actions:
+            layer_membership[a] = math.inf
+        for i, l in enumerate(self._levels):
+            pass
+
+        goals = self._goals
         m = len(self._levels)
         G = []*m
         mark_table = {}
         for i in range(1, m):
-            G[i] =
+            G[i] = {g for g in goals if layer_membership[g] == i}
 
-        for i in range(len(self._levels) - 1, 0, -1):
-            for g in x:
-                for f in o.preconditions:
+        for i in range(m, 0, -1):
+            for g in G[i]:
+                #o = [o for o on if g in o.add_effects and layer_membership[o] == (i - 1)]
+                #o = min(o, key=lambda x:
+                if mark_table[g]:
+                    continue
+                for f in [f for f in o.preconditions if layer_membership[f] != 0 and mark_table[(i - 1, f)]]:
+                    G[layer_membership[f]] = G[layer_membership[f]] + {f}
 
                 for f in o.add_effects:
                     mark_table[(i, f)] = True
@@ -546,10 +339,13 @@ class RelaxedPlanningGraph:
         Perform backward depth-first search
 
         """
-        goal_set = self._problem.goal
+        goal_set = self._goals
         index = len(self._levels) - 1
+        if index == 0:
+            return []
         search_stack = []
         action_tree = {}
+
         action_candidates = []
         for g in goal_set:
             actions = set([e[0] for e in self._levels[index].add_edges
@@ -592,7 +388,7 @@ class RelaxedPlanningGraph:
                                                 if not isinstance(a, Noop)])
                             solution.append(action)
                             a = action_tree[a]
-                        return solution
+                        return [s for s in solution if s]
                     else:
                         key = (index-1, tuple(action_tuple))
                         action_tree[key] = (index, parent_actions)
@@ -635,5 +431,3 @@ class RelaxedPlanningGraph:
                 g.node(s.safe_name + this, label=s.name)
             g.body.append('{rank=same; ' + '; '.join(s.safe_name + this for s in level.states) + ';}')
         g.view()
-
-
