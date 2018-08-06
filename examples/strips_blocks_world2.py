@@ -68,7 +68,7 @@ def run():
     pprint(goal)
 
 
-    print("---- search ----")
+    print("---- Breadth First Search ----")
     result = breadth_first_search(problem, init, goal)
     #result = depth_first_search(problem)
     if result is None:
@@ -78,13 +78,13 @@ def run():
         for a, s in result:
             print('    |')
             print('    V')
-            print(a)
+            print(a.name)
             print('    |')
             print('    V')
             print(s)
 
 
-    print('-------------------')
+    print('---- Graph Plan ---------------')
     pg = PlanningGraph(problem, init, goal)
     start = time.time()
     solution = pg.solve()
@@ -97,20 +97,20 @@ def run():
         print('FAILED')
     pg.visualize()
 
-    print('-------------------')
+    print('---- Relaxed Planning Graph ---------------')
     rpg = RelaxedPlanningGraph(problem, init, goal)
-    start = time.time()
     solution = rpg.solve()
-    end = time.time()
-    print('TIME: ', end - start)
     if solution is not None:
         for actions in solution:
             print(', '.join(a.name for a in actions))
     else:
         print('FAILED')
 
-    print("---- enforced hill climbing search ----")
+    print("---- Enforced Hill Climbing Search ----")
+    start = time.time()
     result = enfoced_hill_climbing_search(problem, init, goal)
+    end = time.time()
+    print('TIME: ', end - start)
     if result is None:
         print("Not found")
     else:
@@ -118,7 +118,7 @@ def run():
         for a, s in result:
             print('    |')
             print('    V')
-            print(a)
+            print(a.name)
             print('    |')
             print('    V')
             print(s)

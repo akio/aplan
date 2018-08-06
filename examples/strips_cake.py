@@ -63,7 +63,7 @@ def run():
         for a, s in result:
             print('    |')
             print('    V')
-            print(a)
+            print(a.name)
             print('    |')
             print('    V')
             print(s)
@@ -117,7 +117,7 @@ def run():
         for a, s in result:
             print('    |')
             print('    V')
-            print(a)
+            print(a.name)
             print('    |')
             print('    V')
             print(s)

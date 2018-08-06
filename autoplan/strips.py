@@ -254,8 +254,35 @@ def breadth_first_search(problem, init=[], goal=[]):
 def rpg_heuristic(problem, init, goal):
     rpg = RelaxedPlanningGraph(problem, init, goal)
     plan = rpg.solve()
-    print('h=', len(plan))
     return len(plan)
+
+
+def _search_better_state(problem, init, goal):
+    h = rpg_heuristic(problem, init, goal)
+    open_nodes = [init]
+    edges = []
+    closed_nodes = set()
+    while open_nodes:
+        s = open_nodes.pop(0)
+        for a in problem.ground_actions:
+            if a.preconditions.issubset(s):
+                new_s = (s | a.add_effects) - a.del_effects
+                new_h = rpg_heuristic(problem, new_s, goal)
+                edges.append((s, new_s, a, new_h))
+                if new_h < h:
+                    path = []
+                    x = new_s
+                    while x != init:
+                        for src, dst, act, heu in edges:
+                            if dst == x:
+                                x = src
+                                path.append((act, dst, heu))
+                                break
+                    return list(reversed(path))
+                if new_s not in closed_nodes:
+                    open_nodes.append(new_s)
+        closed_nodes.add(s)
+    return None
 
 
 def enfoced_hill_climbing_search(problem, init=[], goal=[]):
@@ -265,20 +292,12 @@ def enfoced_hill_climbing_search(problem, init=[], goal=[]):
     plan = []
     g = frozenset(goal)
     s = frozenset(init)
-    while rpg_heuristic(problem, s, g) != 0:
-        xs = []
-        while True:
-            for a in problem.ground_actions:
-                if a.preconditions.issubset(s):
-                    new_s = (s | a.add_effects) - a.del_effects
-                    new_h = rpg_heuristic(problem, new_s, g)
-                    if new_h <= rpg_heuristic(problem, s, goal):
-                        xs.append((new_h, new_s, a))
-        print(xs)
-        if not xs:
+    h = rpg_heuristic(problem, s, g)
+    while h != 0:
+        xs = _search_better_state(problem, s, g)
+        if xs is None:
             return None
-        min_h, min_s, min_a = min(xs, key=lambda x: x[0])
-        plan.append((min_a, min_s))
-        s = min_s
+        plan.extend(x[:2] for x in xs)
+        _, s, h = xs[-1]
     return plan
 
