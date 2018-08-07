@@ -5,7 +5,7 @@ from autoplan.strips import Action
 from autoplan.strips import Domain
 from autoplan.strips import depth_first_search
 from autoplan.strips import breadth_first_search
-from autoplan.strips import enfoced_hill_climbing_search
+from autoplan.strips import enforced_hill_climbing_search
 from autoplan.planning_graph import PlanningGraph
 from autoplan.planning_graph import RelaxedPlanningGraph
 
@@ -75,7 +75,7 @@ def run():
             print(s)
 
 
-    print('-------------------')
+    print('---- PlanningGraph ---------------')
     pg = PlanningGraph(problem, init, goal)
     solution = pg.solve()
     if solution is not None:
@@ -84,18 +84,18 @@ def run():
     else:
         print('FAILED')
 
-    print('-------------------')
+    print('---- RelaxedPlanningGraph ---------------')
     rpg = RelaxedPlanningGraph(problem, init, goal)
     solution = rpg.solve()
     if solution is not None:
-        for actions in solution:
-            print(', '.join(a.name for a in actions))
+        for a in solution:
+            print(a.name)
     else:
         print('FAILED')
 
 
     print("---- enforced hill climbing search ----")
-    result = enfoced_hill_climbing_search(problem, init, goal)
+    result = enforced_hill_climbing_search(problem, init, goal)
     if result is None:
         print("Not found")
     else:

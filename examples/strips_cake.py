@@ -5,7 +5,7 @@ from autoplan.strips import Action
 from autoplan.strips import Domain
 from autoplan.strips import depth_first_search
 from autoplan.strips import breadth_first_search
-from autoplan.strips import enfoced_hill_climbing_search
+from autoplan.strips import enforced_hill_climbing_search
 from autoplan.planning_graph import PlanningGraph
 from autoplan.planning_graph import RelaxedPlanningGraph
 
@@ -53,9 +53,8 @@ def run():
     pprint(goal)
 
 
-    print("---- search ----")
-    result = breadth_first_search(problem)
-    #result = depth_first_search(problem)
+    print("---- breadth first search ----")
+    result = breadth_first_search(problem, init, goal)
     if result is None:
         print("Not found")
     else:
@@ -69,47 +68,29 @@ def run():
             print(s)
 
 
-    print('-------------------')
+    print('---- Graphplan ---------------')
     pg = PlanningGraph(problem, init, goal)
     solution = pg.solve()
 
-    #pg.visualize()
     if solution is not None:
+        print('SOLUTION:')
         for actions in solution:
             print(', '.join(a.name for a in actions))
     else:
         print('FAILED')
 
-    print('-------------------')
+    print('---- Relaxed Planning Graph ---------------')
     rpg = RelaxedPlanningGraph(problem, init, goal)
     solution = rpg.solve()
     if solution is not None:
-        for actions in solution:
-            print(', '.join(a.name for a in actions))
+        print('SOLUTION:')
+        for a in solution:
+            print(a.name)
     else:
         print('FAILED')
 
-    print("---- test 1 ----")
-
-    rpg = RelaxedPlanningGraph(problem, [NotHave('cake'), Eaten('cake')],
-                               [Have('cake'), Eaten('cake')])
-    print('x=', rpg._possible_goal())
-    solution = rpg.solve()
-    print('h=', len(solution))
-    print(solution)
-    rpg.visualize()
-
-    print("---- test 2 ----")
-
-    rpg = RelaxedPlanningGraph(problem, [Have('cake'), Eaten('cake')],
-                               [Have('cake'), Eaten('cake')])
-    print('x=', rpg._possible_goal())
-    solution = rpg.solve()
-    print('h=', len(solution))
-    print(solution)
-
-    print("---- enforced hill climbing search ----")
-    result = enfoced_hill_climbing_search(problem, init, goal)
+    print("---- Enforced Hill Climbing Search ----")
+    result = enforced_hill_climbing_search(problem, init, goal)
     if result is None:
         print("Not found")
     else:
@@ -121,4 +102,5 @@ def run():
             print('    |')
             print('    V')
             print(s)
+
 

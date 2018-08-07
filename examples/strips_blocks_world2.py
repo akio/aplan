@@ -5,7 +5,7 @@ from autoplan.strips import Action
 from autoplan.strips import Domain
 from autoplan.strips import depth_first_search
 from autoplan.strips import breadth_first_search
-from autoplan.strips import enfoced_hill_climbing_search
+from autoplan.strips import enforced_hill_climbing_search
 from autoplan.planning_graph import PlanningGraph
 from autoplan.planning_graph import RelaxedPlanningGraph
 
@@ -67,10 +67,28 @@ def run():
     pprint(init)
     pprint(goal)
 
+    print("---- Depth First Search ----")
+    start = time.time()
+    result = depth_first_search(problem, init, goal)
+    end = time.time()
+    print('TIME: ', end - start)
+    if result is None:
+        print("Not found")
+    else:
+        print(init)
+        for a, s in result:
+            print('    |')
+            print('    V')
+            print(a.name)
+            print('    |')
+            print('    V')
+            print(s)
 
     print("---- Breadth First Search ----")
+    start = time.time()
     result = breadth_first_search(problem, init, goal)
-    #result = depth_first_search(problem)
+    end = time.time()
+    print('TIME: ', end - start)
     if result is None:
         print("Not found")
     else:
@@ -95,20 +113,20 @@ def run():
             print(', '.join(a.name for a in actions))
     else:
         print('FAILED')
-    pg.visualize()
 
     print('---- Relaxed Planning Graph ---------------')
     rpg = RelaxedPlanningGraph(problem, init, goal)
     solution = rpg.solve()
     if solution is not None:
-        for actions in solution:
-            print(', '.join(a.name for a in actions))
+        for a in solution:
+            print(a)
     else:
         print('FAILED')
+    #rpg.visualize()
 
     print("---- Enforced Hill Climbing Search ----")
     start = time.time()
-    result = enfoced_hill_climbing_search(problem, init, goal)
+    result = enforced_hill_climbing_search(problem, init, goal)
     end = time.time()
     print('TIME: ', end - start)
     if result is None:

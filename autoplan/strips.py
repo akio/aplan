@@ -177,7 +177,7 @@ class Domain:
             for args in itertools.permutations(self.objects, nparams):
                 a = act(*args)
                 actions.append(a)
-        self.ground_actions = frozenset(actions)
+        self.ground_actions = actions
 
 
 def depth_first_search(problem, init=[], goal=[]):
@@ -185,22 +185,17 @@ def depth_first_search(problem, init=[], goal=[]):
     init_set = frozenset(init)
     goal_set = frozenset(goal)
 
-    print("INIT_SET: {}".format(init_set))
-    print("GOAL_SET: {}".format(goal_set))
-
     open_nodes = [init_set]
     closed_nodes = []
     edges = []
 
     while len(open_nodes) > 0:
         state = open_nodes.pop()
-        print("CURRENT: {}".format(state))
         for a in problem.ground_actions:
             if a.preconditions.issubset(state):
                 new_state = (state | a.add_effects) - a.del_effects
                 edges.append((state, new_state, a))
                 if goal_set.issubset(new_state):
-                    print("Solution found")
                     s = new_state
                     path = []
                     while s != init_set:
@@ -221,16 +216,12 @@ def breadth_first_search(problem, init=[], goal=[]):
     init_set = frozenset(init)
     goal_set = frozenset(goal)
 
-    print("INIT_SET: {}".format(init_set))
-    print("GOAL_SET: {}".format(goal_set))
-
     open_nodes = [init_set]
     closed_nodes = []
     edges = []
 
     while len(open_nodes) > 0:
         state = open_nodes.pop(0)
-        print("CURRENT: {}".format(state))
         for a in problem.ground_actions:
             if a.preconditions.issubset(state):
                 new_state = (state | a.add_effects) - a.del_effects
@@ -254,10 +245,13 @@ def breadth_first_search(problem, init=[], goal=[]):
 def rpg_heuristic(problem, init, goal):
     rpg = RelaxedPlanningGraph(problem, init, goal)
     plan = rpg.solve()
+    print(len(plan))
     return len(plan)
 
 
 def _search_better_state(problem, init, goal):
+    """Search a state that has a better heuristic value with breadth first search
+    """
     h = rpg_heuristic(problem, init, goal)
     open_nodes = [init]
     edges = []
@@ -285,7 +279,7 @@ def _search_better_state(problem, init, goal):
     return None
 
 
-def enfoced_hill_climbing_search(problem, init=[], goal=[]):
+def enforced_hill_climbing_search(problem, init=[], goal=[]):
     # type: (Domain) -> List[(Action, State)]
     nodes = []
     heapq.heapify(nodes)
