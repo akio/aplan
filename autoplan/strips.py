@@ -245,7 +245,6 @@ def breadth_first_search(problem, init=[], goal=[]):
 def rpg_heuristic(problem, init, goal):
     rpg = RelaxedPlanningGraph(problem, init, goal)
     plan = rpg.solve()
-    print(len(plan))
     return len(plan)
 
 
