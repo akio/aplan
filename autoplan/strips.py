@@ -263,6 +263,7 @@ def _search_better_state(problem, init, goal):
                 new_h = rpg_heuristic(problem, new_s, goal)
                 edges.append((s, new_s, a, new_h))
                 if new_h < h:
+                    print('h = ', new_h)
                     path = []
                     x = new_s
                     while x != init:
