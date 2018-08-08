@@ -152,10 +152,13 @@ def run():
 
     print('---- Relaxed Planning Graph ---------------')
     rpg = RelaxedPlanningGraph(problem, init, goal)
+    start = time.time()
     solution = rpg.solve()
+    end = time.time()
+    print('TIME: ', end - start)
     if solution is not None:
         for a in solution:
-            print(a)
+            print(a.name)
     else:
         print('FAILED')
     #rpg.visualize()

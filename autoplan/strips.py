@@ -28,15 +28,18 @@ class State:
             raise ValueError("Length not match")
         self.args = copy.deepcopy(self.variables)
         self.bind(**dict(zip(self.variables, args)))
+        self._identifier = None
 
     def ground(self):
-        pass
+        return all(not x.startswith('?') for x in self.args)
 
     def bind(self, **kwargs):
         for i, a in enumerate(self.args):
             if a.startswith('?'):
                 if a in kwargs:
                     self.args[i] = kwargs[a]
+        if self.ground():
+            self._hash = hash(tuple([self.__class__.__name__, *self.args]))
 
     @property
     def name(self):
@@ -49,7 +52,9 @@ class State:
         return '{}_{}'.format(cls, '_'.join(self.args))
 
     def __hash__(self):
-        return hash(self.safe_name)
+        if self._hash is None:
+            raise Exception("Only grounded states support hashing")
+        return self._hash
 
     def __eq__(self, other):
         return hash(self) == hash(other)
@@ -79,6 +84,9 @@ class Action:
 
     """
     def __init__(self, *args):
+        self._tuple =  tuple([self.__class__.__name__, *args])
+        self._hash = hash(self._tuple)
+
         self.bindings = dict(zip(self.variables, args))
 
         preconditions = []
@@ -136,7 +144,7 @@ class Action:
         return '{}_{}_'.format(cls, '_'.join(args))
 
     def __hash__(self):
-        return hash(self.safe_name)
+        return self._hash
 
     def __repr__(self):
         buf = []
@@ -242,16 +250,14 @@ def breadth_first_search(problem, init=[], goal=[]):
     return None
 
 
-def rpg_heuristic(problem, init, goal):
-    rpg = RelaxedPlanningGraph(problem, init, goal)
-    plan = rpg.solve()
-    return len(plan)
+def rpg_heuristic(rpg, init, goal):
+    rpg.reset(init, goal)
+    return len(rpg.solve())
 
-
-def _search_better_state(problem, init, goal):
+def _search_better_state(problem, rpg, init, goal):
     """Search a state that has a better heuristic value with breadth first search
     """
-    h = rpg_heuristic(problem, init, goal)
+    h = rpg_heuristic(rpg, init, goal)
     open_nodes = [init]
     edges = []
     closed_nodes = set()
@@ -260,7 +266,7 @@ def _search_better_state(problem, init, goal):
         for a in problem.ground_actions:
             if a.preconditions.issubset(s):
                 new_s = (s | a.add_effects) - a.del_effects
-                new_h = rpg_heuristic(problem, new_s, goal)
+                new_h = rpg_heuristic(rpg, new_s, goal)
                 edges.append((s, new_s, a, new_h))
                 if new_h < h:
                     print('h = ', new_h)
@@ -281,14 +287,16 @@ def _search_better_state(problem, init, goal):
 
 def enforced_hill_climbing_search(problem, init=[], goal=[]):
     # type: (Domain) -> List[(Action, State)]
+    rpg = RelaxedPlanningGraph(problem, init, goal)
     nodes = []
     heapq.heapify(nodes)
     plan = []
     g = frozenset(goal)
     s = frozenset(init)
-    h = rpg_heuristic(problem, s, g)
+    h = len(rpg.solve())
+    print('INITIAL h = ', h)
     while h != 0:
-        xs = _search_better_state(problem, s, g)
+        xs = _search_better_state(problem, rpg, s, g)
         if xs is None:
             return None
         plan.extend(x[:2] for x in xs)

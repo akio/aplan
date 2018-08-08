@@ -52,6 +52,10 @@ def run():
     pprint(init)
     pprint(goal)
 
+    print(hash(Have('cake')))
+    print(hash(Have('cake')))
+    print(hash(Have('cake')))
+    print(hash(Have('cake')))
 
     print("---- breadth first search ----")
     result = breadth_first_search(problem, init, goal)

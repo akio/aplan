@@ -267,25 +267,14 @@ class RelaxedPlanningGraph:
     def __init__(self, problem, init=[], goal=[]):
         # type: (Domain) -> None
         self._problem = problem
-        self._levels = []
-        level = Level()
-        level.states = frozenset(init)
-        self._goals = frozenset(goal)
-        self._levels.append(level)
-        self._layer_membership = defaultdict(lambda: sys.maxint)
-
-        self._action_counters = defaultdict(lambda: 0)
-        self._precondition_map = {}
+        self._reverse_precondition_map = {}
         for s in self._problem.ground_states:
-            self._precondition_map[s] = set()
+            self._reverse_precondition_map[s] = set()
             for a in self._problem.ground_actions:
                 if s in a.preconditions:
-                    self._precondition_map[s].add(a)
+                    self._reverse_precondition_map[s].add(a)
 
-        for s in init:
-            self._layer_membership[s] = 0
-            for a in self._precondition_map[s]:
-                self._action_counters[a.name] += 1
+        self.reset(init, goal)
 
     def solve(self):
         while True:
@@ -297,11 +286,26 @@ class RelaxedPlanningGraph:
             if not self._expand_graph():
                 return None
 
+    def reset(self, init=[], goal=[]):
+        self._levels = []
+        level = Level()
+        level.states = frozenset(init)
+        self._goals = frozenset(goal)
+        self._levels.append(level)
+        self._layer_membership = defaultdict(lambda: -1)
+        self._action_counters = defaultdict(lambda: 0)
+        self._ready_actions = []
+
+        for s in init:
+            self._layer_membership[s] = 0
+            for a in self._reverse_precondition_map[s]:
+                self._action_counters[a] += 1
+                if self._action_counters[a] == len(a.preconditions):
+                    self._ready_actions.append(a)
+
+
     def _possible_goal(self):
-        goals = self._goals
-        if not goals.issubset(self._levels[-1].states):
-            return False
-        return True
+        return all(self._layer_membership[x] >= 0 for x in self._goals)
 
     def _expand_graph(self):
         index = len(self._levels) - 1
@@ -317,21 +321,60 @@ class RelaxedPlanningGraph:
             new_level.states.add(s)
 
         # Extend actions
-        ready_actions = [a for a in self._problem.ground_actions
-                         if len(a.preconditions) == self._action_counters[a.name]]
-        for a in ready_actions:
+        new_ready_actions = []
+        for a in self._ready_actions:
             now_level.actions.add(a)
-            if a not in self._layer_membership:
+            if self._layer_membership[a] < 0:
                 self._layer_membership[a] = index
             for s in a.preconditions:
                 now_level.precondition_edges.add((s, a))
             for e in a.add_effects:
                 now_level.add_edges.add((a, e))
                 new_level.states.add(e)
-                if e not in self._layer_membership:
+                if self._layer_membership[e] < 0:
                     self._layer_membership[e] = index + 1
-                    for a in self._precondition_map[e]:
-                        self._action_counters[a.name] += 1
+                    for a in self._reverse_precondition_map[e]:
+                        self._action_counters[a] += 1
+                        if self._action_counters[a] == len(a.preconditions):
+                            new_ready_actions.append(a)
+        self._ready_actions.extend(new_ready_actions)
+
+        # If a new layer has the same stetes with previous layer, return False
+        if now_level == new_level:
+            return False
+
+        self._levels.append(new_level)
+        return True
+
+    def _expand_graph_1(self):
+        index = len(self._levels) - 1
+        now_level = self._levels[-1]
+        new_level = Level()
+
+        # Extend no opts
+        for s in now_level.states:
+            noop = Noop(s)
+            now_level.actions.add(noop)
+            now_level.precondition_edges.add((s, noop))
+            now_level.add_edges.add((noop, s))
+            new_level.states.add(s)
+
+        # Extend actions
+        ready_actions = [a for a in self._problem.ground_actions
+                         if len(a.preconditions) == self._action_counters[a]]
+        for a in ready_actions:
+            now_level.actions.add(a)
+            if self._layer_membership[a] < 0:
+                self._layer_membership[a] = index
+            for s in a.preconditions:
+                now_level.precondition_edges.add((s, a))
+            for e in a.add_effects:
+                now_level.add_edges.add((a, e))
+                new_level.states.add(e)
+                if self._layer_membership[e] < 0:
+                    self._layer_membership[e] = index + 1
+                    for a in self._reverse_precondition_map[e]:
+                        self._action_counters[a] += 1
 
         # If a new layer has the same stetes with previous layer, return False
         if now_level == new_level:
