@@ -5,6 +5,7 @@ from typing import List, Dict
 import itertools
 from pprint import pprint, pformat
 from collections import defaultdict
+import time
 
 class Level:
     def __init__(self):
@@ -303,7 +304,6 @@ class RelaxedPlanningGraph:
                 if self._action_counters[a] == len(a.preconditions):
                     self._ready_actions.append(a)
 
-
     def _possible_goal(self):
         return all(self._layer_membership[x] >= 0 for x in self._goals)
 
@@ -347,6 +347,7 @@ class RelaxedPlanningGraph:
         return True
 
     def _expand_graph_1(self):
+        """Expand 1 layer"""
         index = len(self._levels) - 1
         now_level = self._levels[-1]
         new_level = Level()

@@ -126,8 +126,9 @@ def run():
     #rpg.visualize()
 
     print("---- Enforced Hill Climbing Search ----")
+    rpg = RelaxedPlanningGraph(problem)
     start = time.time()
-    result = enforced_hill_climbing_search(problem, init, goal)
+    result = enforced_hill_climbing_search(problem, rpg, init, goal)
     end = time.time()
     print('TIME: ', end - start)
     if result is None:

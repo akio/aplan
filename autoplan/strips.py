@@ -285,15 +285,14 @@ def _search_better_state(problem, rpg, init, goal):
     return None
 
 
-def enforced_hill_climbing_search(problem, init=[], goal=[]):
+def enforced_hill_climbing_search(problem, rpg, init=[], goal=[]):
     # type: (Domain) -> List[(Action, State)]
-    rpg = RelaxedPlanningGraph(problem, init, goal)
     nodes = []
     heapq.heapify(nodes)
     plan = []
     g = frozenset(goal)
     s = frozenset(init)
-    h = len(rpg.solve())
+    h = rpg_heuristic(rpg, s, g)
     print('INITIAL h = ', h)
     while h != 0:
         xs = _search_better_state(problem, rpg, s, g)

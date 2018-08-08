@@ -138,40 +138,40 @@ def run():
     #        print(a.name)
 
 
-    print('---- Graph Plan ---------------')
-    pg = PlanningGraph(problem, init, goal)
-    start = time.time()
-    solution = pg.solve()
-    end = time.time()
-    print('TIME: ', end - start)
-    if solution is not None:
-        for actions in solution:
-            print(', '.join(a.name for a in actions))
-    else:
-        print('FAILED')
+    #print('---- Graph Plan ---------------')
+    #pg = PlanningGraph(problem, init, goal)
+    #start = time.time()
+    #solution = pg.solve()
+    #end = time.time()
+    #print('TIME: ', end - start)
+    #if solution is not None:
+    #    for actions in solution:
+    #        print(', '.join(a.name for a in actions))
+    #else:
+    #    print('FAILED')
 
-    print('---- Relaxed Planning Graph ---------------')
-    rpg = RelaxedPlanningGraph(problem, init, goal)
-    start = time.time()
-    solution = rpg.solve()
-    end = time.time()
-    print('TIME: ', end - start)
-    if solution is not None:
-        for a in solution:
-            print(a.name)
-    else:
-        print('FAILED')
+    #print('---- Relaxed Planning Graph ---------------')
+    #rpg = RelaxedPlanningGraph(problem, init, goal)
+    #start = time.time()
+    #solution = rpg.solve()
+    #end = time.time()
+    #print('TIME: ', end - start)
+    #if solution is not None:
+    #    for a in solution:
+    #        print(a.name)
+    #else:
+    #    print('FAILED')
     #rpg.visualize()
 
     print("---- Enforced Hill Climbing Search ----")
+    rpg = RelaxedPlanningGraph(problem)
     start = time.time()
-    result = enforced_hill_climbing_search(problem, init, goal)
+    result = enforced_hill_climbing_search(problem, rpg, init, goal)
     end = time.time()
     print('TIME: ', end - start)
     if result is None:
         print("Not found")
     else:
-        print(init)
         for a, s in result:
             print(a.name)
 
