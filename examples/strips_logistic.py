@@ -86,7 +86,6 @@ class BlocksWorld(Domain):
     actions = [Load, Unload, Drive, Fly]
 
 def run():
-
     init = [
         Object('packet1'), Object('packet2'),
         Vehicle('truck1'), Vehicle('truck2'), Vehicle('truck3'), Vehicle('airplane1'),
@@ -113,17 +112,16 @@ def run():
     pprint(init)
     pprint(goal)
 
-    #print("---- Depth First Search ----")
-    #start = time.time()
-    #result = depth_first_search(problem, init, goal)
-    #end = time.time()
-    #print('TIME: ', end - start)
-    #if result is None:
-    #    print("Not found")
-    #else:
-    #    print(init)
-    #    for a, s in result:
-    #        print(a.name)
+    print("---- Depth First Search ----")
+    start = time.time()
+    result = depth_first_search(problem, init, goal)
+    end = time.time()
+    print('TIME: ', end - start)
+    if result is None:
+        print("Not found")
+    else:
+        for a, s in result:
+            print(a.name)
 
     #print("---- Breadth First Search ----")
     #start = time.time()
@@ -133,35 +131,33 @@ def run():
     #if result is None:
     #    print("Not found")
     #else:
-    #    print(init)
     #    for a, s in result:
     #        print(a.name)
 
 
-    #print('---- Graph Plan ---------------')
-    #pg = PlanningGraph(problem, init, goal)
-    #start = time.time()
-    #solution = pg.solve()
-    #end = time.time()
-    #print('TIME: ', end - start)
-    #if solution is not None:
-    #    for actions in solution:
-    #        print(', '.join(a.name for a in actions))
-    #else:
-    #    print('FAILED')
+    print('---- Graph Plan ---------------')
+    pg = PlanningGraph(problem, init, goal)
+    start = time.time()
+    solution = pg.solve()
+    end = time.time()
+    print('TIME: ', end - start)
+    if solution is not None:
+        for actions in solution:
+            print(', '.join(a.name for a in actions))
+    else:
+        print('FAILED')
 
-    #print('---- Relaxed Planning Graph ---------------')
-    #rpg = RelaxedPlanningGraph(problem, init, goal)
-    #start = time.time()
-    #solution = rpg.solve()
-    #end = time.time()
-    #print('TIME: ', end - start)
-    #if solution is not None:
-    #    for a in solution:
-    #        print(a.name)
-    #else:
-    #    print('FAILED')
-    #rpg.visualize()
+    print('---- Relaxed Planning Graph ---------------')
+    rpg = RelaxedPlanningGraph(problem, init, goal)
+    start = time.time()
+    solution = rpg.solve()
+    end = time.time()
+    print('TIME: ', end - start)
+    if solution is not None:
+        for a in solution:
+            print(a.name)
+    else:
+        print('FAILED')
 
     print("---- Enforced Hill Climbing Search ----")
     rpg = RelaxedPlanningGraph(problem)

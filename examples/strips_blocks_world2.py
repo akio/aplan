@@ -51,7 +51,6 @@ class BlocksWorld(Domain):
     actions = [Move, ToTable, FromTable]
 
 def run():
-
     init = [On('R', 'B'),
             On('B', 'G'),
             OnTable('G'),
@@ -67,22 +66,17 @@ def run():
     pprint(init)
     pprint(goal)
 
-    #print("---- Depth First Search ----")
-    #start = time.time()
-    #result = depth_first_search(problem, init, goal)
-    #end = time.time()
-    #print('TIME: ', end - start)
-    #if result is None:
-    #    print("Not found")
-    #else:
-    #    print(init)
-    #    for a, s in result:
-    #        print('    |')
-    #        print('    V')
-    #        print(a.name)
-    #        print('    |')
-    #        print('    V')
-    #        print(s)
+    print("---- Depth First Search ----")
+    start = time.time()
+    result = depth_first_search(problem, init, goal)
+    end = time.time()
+    print('TIME: ', end - start)
+    if result is None:
+        print("Not found")
+    else:
+        print(init)
+        for a, s in result:
+            print(a.name)
 
     print("---- Breadth First Search ----")
     start = time.time()
@@ -96,17 +90,17 @@ def run():
         for i, (a, s) in enumerate(result):
             print(i, a.name)
 
-    #print('---- Graph Plan ---------------')
-    #pg = PlanningGraph(problem, init, goal)
-    #start = time.time()
-    #solution = pg.solve()
-    #end = time.time()
-    #print('TIME: ', end - start)
-    #if solution is not None:
-    #    for actions in solution:
-    #        print(', '.join(a.name for a in actions))
-    #else:
-    #    print('FAILED')
+    print('---- Graph Plan ---------------')
+    pg = PlanningGraph(problem, init, goal)
+    start = time.time()
+    solution = pg.solve()
+    end = time.time()
+    print('TIME: ', end - start)
+    if solution is not None:
+        for actions in solution:
+            print(', '.join(a.name for a in actions))
+    else:
+        print('FAILED')
 
     print('---- Relaxed Planning Graph ---------------')
     rpg = RelaxedPlanningGraph(problem, init, goal)
